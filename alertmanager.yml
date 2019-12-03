@@ -1,0 +1,128 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'mail.domain.no:25'
+  smtp_from: 'AlertManager <alertmanager@domain.no>'
+  smtp_hello: 'alertmanager'
+  slack_api_url: 'https://hooks.slack.com/services/TNW643624LF/B123132/PIZ1212121212121212cI2Hr6BS'
+  opsgenie_api_key: '12121212-0120-4121-8120-112121212'
+  opsgenie_api_url: 'https://api.opsgenie.com/'
+  http_config: {
+  proxy_url: 'http://10.10.0.17:3128'}
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  receiver: 'default'
+  group_by: ['instance', 'alert']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+  routes:
+  - match:
+      severity: critical
+    receiver: 'critical-message'
+    routes:
+    - match:
+        group: windows_remote
+      receiver: 'win_remote-critical'
+    - match:
+        group: infrastructure_remote
+      receiver: 'win_remote-critical'
+    - match:
+        group: remote
+      receiver: 'remote-critical'
+    - match:
+        group: windows_servers_domain
+      receiver: 'critical-message-domain'
+
+  - match:
+      severity: warning
+    receiver: 'all-warning'
+    routes:
+    - match_re:
+        alertname: servicedown
+      receiver: 'win_service-warning'
+
+receivers:
+- name: 'default'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+  - channel: '#infrastructure' 
+    username: '{{ template "slack.default.username" . }}'
+    color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    title: '{{ template "slack.default.title" . }}'
+    title_link: '{{ template "slack.default.titlelink" . }}'
+    pretext: '{{ .CommonAnnotations.summary }}'
+    text: |-
+      {{ range .Alerts }}
+         *Alert:* {{ .Annotations.summary }} - `{{ .Labels.severity }}`
+        *Description:* {{ .Annotations.description }}
+        *Details:*
+        {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `{{ .Value }}`
+        {{ end }}
+      {{ end }}
+    fallback: '{{ template "slack.default.fallback" . }}'
+    icon_emoji: '{{ template "slack.default.iconemoji" . }}'
+    icon_url: '{{ template "slack.default.iconurl" . }}'
+
+- name: 'critical-message'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+    api_url: 'https://hooks.slack.com/services/T1212121212/1212121212AP2/PIZ12121212121212Hr6BS'
+    channel: '#infrastructure'
+  opsgenie_configs:
+  - send_resolved: true
+
+- name: 'critical-message-nesk'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+    api_url: 'https://hooks.slack.com/services/T1212121212/1212121212AP2/PIZ12121212121212Hr6BS'
+    channel: '#infrastructure'
+  opsgenie_configs:
+  - send_resolved: true
+
+- name: 'win_remote-critical'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no, manager@domain.no, manager@domain.no, manager@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+    api_url: 'https://hooks.slack.com/services/T2342421LF/B353203335B/md3464362342342435Q2'
+  - channel: '#cash'
+
+- name: 'all-warning'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+  - channel: '#infrastructure'
+
+- name: 'win_service-warning'
+  email_configs:
+    - to: 'admin@domain.no, admin@domain.no, admin@domain.no, manager@domain.no, manager@domain.no, manager@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+  - channel: '#infrastructure'
+
+- name: 'remote-critical'
+  email_configs:
+    - to: 'kadmin@domain.no'
+      send_resolved: true
+  slack_configs:
+  - send_resolved: true
+    api_url: 'https://hooks.slack.com/services/T42342424wF/BP3245325235PTR/jWo325235325325239'
+  - channel: '#remote'
+
